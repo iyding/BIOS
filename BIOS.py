@@ -1,13 +1,6 @@
-from selenium import webdriver
 from selenium.webdriver.common.by import By
-import pandas
 import time
 import numpy as np
-
-path = '/Users/thompsonblade/Documents/Chromedriver/chromedriver'
-
-driver = webdriver.Chrome()
-
 class Roster:
     def __init__(self, driver, link):
         self.driver = driver
@@ -18,10 +11,6 @@ class Roster:
         roster_links = [link.get_attribute("href") for link in links if link.get_attribute("href") != None and link.get_attribute("href").split("/")[-1] == "roster"]
         self.roster_links = roster_links
 
-
-
-yale_roster = Roster(driver, "https://yalebulldogs.com/")
-print(yale_roster.roster_links)
 
 class Player:
     def __init__(self, name, height, year, highschool, hometown, weight):
@@ -38,15 +27,15 @@ class Player:
         return self.name
 
 class Team:
-    def __init__(self, roster_link):
+    def __init__(self, roster_link, driver):
         self.roster_link = roster_link
         self.players = []
         self.team_name = roster_link.split("/")[-1]
-
+        self.driver = driver
     def scrape(self):
-        driver.get(self.roster_link)
+        self.driver.get(self.roster_link)
         time.sleep(0.5)
-        people = driver.find_element(By.CLASS_NAME, "sidearm-roster-players")
+        people = self.driver.find_element(By.CLASS_NAME, "sidearm-roster-players")
         people_links = people.find_elements("tag name", "a")
         people_href = [people.get_attribute("href") for people in people_links if
                        people.get_attribute("href") is not None]
@@ -54,9 +43,9 @@ class Team:
                                 people != 'https://yalebulldogs.com/sports/womens-basketball/roster#']
         people_href_dist = list(set(people_href_filtered))
         for people in people_href_dist:
-            driver.get(people)
+            self.driver.get(people)
             time.sleep(0.5)
-            header = driver.find_elements("tag name", "header")[1]
+            header = self.driver.find_elements("tag name", "header")[1]
             names = header.find_elements("tag name", "span")
             name_text = [name.text for name in names]
             name = " ".join(name_text[-2:])
@@ -77,13 +66,4 @@ class Team:
             player = Player(name = val_dict["Name"], weight = val_dict["Weight"], year = val_dict["Class"],
                             highschool= val_dict["Highschool"], hometown = val_dict["Hometown"], height = val_dict["Height"])
             self.players.append(player)
-wbb = Team("https://yalebulldogs.com/sports/womens-basketball/roster")
-
-wbb.scrape()
-
-print(wbb.team_name)
-
-print(wbb.players)
-
-print(wbb.players[4].name)
 
