@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import pandas
 import time
+import numpy as np
 
 path = '/Users/thompsonblade/Documents/Chromedriver/chromedriver'
 
@@ -23,12 +24,13 @@ yale_roster = Roster(driver, "https://yalebulldogs.com/")
 print(yale_roster.roster_links)
 
 class Player:
-    def __init__(self, name, height, year, highschool, hometown):
+    def __init__(self, name, height, year, highschool, hometown, weight):
         self.name = name
         self.year = year
         self.hometown = hometown
         self.highschool = highschool
         self.height = height
+        self.weight = weight
     def __repr__(self):
         return self.name
 
@@ -46,17 +48,35 @@ class Team:
         time.sleep(0.5)
         people = driver.find_element(By.CLASS_NAME, "sidearm-roster-players")
         people_links = people.find_elements("tag name", "a")
-        people_href = [people.get_attribute("href") for people in people_links if people.get_attribute("href") != None]
-        for people in people_href:
+        people_href = [people.get_attribute("href") for people in people_links if
+                       people.get_attribute("href") is not None]
+        people_href_filtered = [people for people in people_href if
+                                people != 'https://yalebulldogs.com/sports/womens-basketball/roster#']
+        people_href_dist = list(set(people_href_filtered))
+        for people in people_href_dist:
             driver.get(people)
-            time.sleep(1)
-            name = driver.find_element(By.CLASS_NAME, "sidearm-roster-player-first-name").text + " " + driver.find_element(By.CLASS_NAME, "sidearm-roster-player-last-name").text
-            info = driver.find_element(By.CLASS_NAME,"flex flex-item-1 row flex-wrap")
-            vals = info.find_elements("tag name","dd")
-            info_str = [val.text for val in vals]
-            player = Player(name, info_str[0], info_str[1], info_str[2], info_str[3])
+            time.sleep(0.5)
+            header = driver.find_elements("tag name", "header")[1]
+            names = header.find_elements("tag name", "span")
+            name_text = [name.text for name in names]
+            name = " ".join(name_text[-2:])
+            li = header.find_element("tag name", "ul").find_elements("tag name", "li")
+            val_dict = {}
+            val_dict["Name"] = name
+            for element in li:
+                cat = element.find_element("tag name", "dt").text
+                val = element.find_element("tag name", "dd").text
+                if cat == "Height":
+                    nums = val.split("-")
+                    nums = [int(num) for num in nums]
+                    feet = 12 * nums[0]
+                    val = feet + nums[1]
+                val_dict[cat] = val
+            if "Weight" not in val_dict:
+                val_dict["Weight"] = np.NaN
+            player = Player(name = val_dict["Name"], weight = val_dict["Weight"], year = val_dict["Class"],
+                            highschool= val_dict["Highschool"], hometown = val_dict["Hometown"], height = val_dict["Height"])
             self.players.append(player)
-
 wbb = Team("https://yalebulldogs.com/sports/womens-basketball/roster")
 
 wbb.scrape()
@@ -64,4 +84,6 @@ wbb.scrape()
 print(wbb.team_name)
 
 print(wbb.players)
+
+print(wbb.players[4].name)
 
